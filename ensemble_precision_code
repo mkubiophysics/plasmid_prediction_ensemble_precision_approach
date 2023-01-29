@@ -1,0 +1,48 @@
+ensemble precision  approach for plasmid prediction
+
+
+######### SOFTWARE REQUIREMENT ############
+
+1.SPAdes
+2.Plasmidfinder
+3.PlasmidSPAdes
+4.Platon
+5.Unicycler
+6.cd-hit-est
+
+########## Prediction tool run #############
+
+nohup spades.py -1 Read1.fastq -2 Read2.fastq -o assembly --careful -t 6 -k 21,33,55 & (spades run)
+
+nohup plasmidspades.py -1 Read1.fastq -2 Read2.fastq -o plasmidspades_assembly --careful -t 6 -k 21,33,55 & (plasmidspades run plasmid reconstruction) 
+
+nohup plasmidfinder.py -i contigs.fasta -o plasmidfinder.result -mp blastn  -l 0.95 -t 0.90 -x & (plasmidfinder run refrence based plasmid finding)
+
+nohup platon -d db  -o ip9.out  contigs.fasta & (platon run binary classification)
+
+nohup unicycler -1 Read1.fastq -2 Read2.fastq --min_fasta_length 200 -o unicycler_assembly & (Unicycler run for circular plasmid identification)
+
+######## POOL plasmid sequences ##############
+
+sed 's/>/>plasmidfinder-/g' Plasmid_seqs.fsa >plasmidfinder_data.fasta
+
+sed 's/>/>plasmidspades-/g' contigs.fasta >plasmidspades_data.fasta
+
+sed 's/>/>platon-/g' contigs.plasmid.fasta >platon_data.fasta
+
+sed 's/>/>unicycler-/g' contigs.plasmid.fasta >unicycler_data.fasta
+
+cat plasmidfinder_data.fasta plasmidspades_data.fasta platon_data.fasta unicycler_data.fasta >pooled_candidate_plasmid_contigs.fasta
+
+cd-hit-est  -c 0.8 -sc 1 -i pooled_candidate_plasmid_contigs.fasta -o pooled_candidate_plasmid_contigs.fasta_cd-hit-est.fasta
+
+sed  's/, >/\t/g' pooled_candidate_plasmid_contigs.fasta_cd-hit-est.clstr |sed -z 's/\n/,/g'|sed  's/,>/\n/g'|sed 's/,$/\n/g' >file_format.csv
+
+perl pool_prediction.pl file_format.csv >3_tool_prediction.csv
+
+
+ 
+
+
+
+
